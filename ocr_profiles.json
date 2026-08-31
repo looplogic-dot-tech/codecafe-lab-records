@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "default": {
+    "first_pass_dpi": 90,
+    "detail_dpi": 220,
+    "rescue_dpi": 300,
+    "workers": 1,
+    "first_pass_batch_size": 4,
+    "detail_batch_size": 2,
+    "rescue_batch_size": 1,
+    "page_timeout_seconds": 30,
+    "language": "spa+eng",
+    "threshold": 178
+  },
+  "labs": {
+    "SimiLab": {
+      "markers": ["similab", "analisis clinicos del dr simi", "estimado medico"],
+      "detail_dpi": 240
+    },
+    "Chopo": {
+      "markers": ["chopo", "grupo diagnostico medico proa", "www.chopo.com.mx"],
+      "prefer_embedded_text": true
+    },
+    "IMSS": {
+      "markers": ["imss", "laboratorio clinico", "hospital general de zona"],
+      "detail_dpi": 260
+    },
+    "DNA Diagnóstica": {
+      "markers": ["dna diagnostica", "centro integral de diagnostico"],
+      "detail_dpi": 260
+    }
+  }
+}
