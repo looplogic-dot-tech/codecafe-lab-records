@@ -1,5 +1,19 @@
-# Registros Clínicos by CodeCafe — Python v0.6.11 Desktop Window
+# Registros Clínicos by CodeCafe — Python v0.6.12 Multi-Record Adaptive OCR
 
+## v0.6.12 multi-record adaptive OCR
+
+v0.6.12 keeps the validated v0.6.11 application as the stable baseline and adds a separate adaptive parser layer for large PDFs that contain several clinical records from different dates.
+
+- One physical PDF can yield multiple logical records while the original file remains preserved only once in the Library.
+- Pages are classified by date, laboratory and study before detailed extraction.
+- ECG and ultrasound pages are treated as diagnostic records rather than forced through laboratory-table parsing.
+- Missing dates are inherited only when neighboring pages agree, avoiding aggressive guesses.
+- Detailed laboratory extraction still uses the established multi-laboratory parser, so SimiLab, Chopo, IMSS, DNA Diagnóstica and future formats keep their existing rules.
+- `ocr_profiles.json` provides a configurable place for OCR tuning without rewriting the clinical parser.
+- Long scanned bundles use disposable OCR helper processes so Tesseract/Leptonica state is recycled between small batches.
+- Automated multi-record tests are synthetic; real clinical PDFs and patient databases are not repository fixtures.
+
+See `RELEASE_NOTES_v0.6.12.md` and `ROADMAP_v0.6.12.md` for the development/validation status. The previous stable source is preserved on branch `stable-v0.6.11`.
 
 ## v0.6.6 uroculture robustness + folder/bulk import
 
@@ -26,11 +40,9 @@ This release fixes a macOS regression where a PDF could expose header metadata b
 
 Exact runtime dependency versions remain pinned in `requirements.txt` for Linux, macOS, and Windows.
 
-
 ## Purpose
 
 CodeCafe Lab Records remains primarily a family clinical-laboratory record organizer. It preserves original reports, extracts and normalizes laboratory results, tracks trends and daily measurements, and keeps other clinical documents easy to find.
-
 
 ## v0.6.1 integrated PDF viewer
 
@@ -127,7 +139,6 @@ For a family/friend-friendly installation, build a native package instead of sha
 
 On Debian/Ubuntu-family systems this produces a `.deb`; on Fedora/RHEL/CentOS-family systems it produces an `.rpm`.
 See `PACKAGING_LINUX.md` for details and the important rule that each package must be built on the matching Linux family.
-
 
 ## v0.6.11 native printing
 
