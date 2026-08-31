@@ -12,7 +12,7 @@ from typing import Any
 DATA_APP_NAME = "CodeCafe Lab Records"  # keep legacy data path for upgrade compatibility
 DISPLAY_NAME = "Registros Clínicos"
 APP_NAME = DISPLAY_NAME
-APP_VERSION = "0.6.11-registros-clinicos-weight"
+APP_VERSION = "0.6.12-multi-record-adaptive-ocr"
 
 
 def platform_data_dir() -> Path:
@@ -31,22 +31,11 @@ def platform_data_dir() -> Path:
     return (xdg / DATA_APP_NAME).resolve()
 
 
-# Keep QPrinter instances alive until Qt WebEngine reports that asynchronous
-# printing has finished.  QWebEngineView.print() explicitly requires this.
 _ACTIVE_QT_PRINT_JOBS: list[tuple[Any, Any]] = []
 
 
 def _enable_linux_qt_printing(window: Any) -> dict[str, object]:
-    """Wire JavaScript window.print() to the native Qt/CUPS print dialog.
-
-    pywebview's Qt backend exposes the underlying QWebEngineView as
-    ``window.native.webview`` but does not install a handler for
-    QWebEnginePage.printRequested.  Without a handler, JavaScript
-    ``window.print()`` emits a signal and nothing visible happens.
-
-    This hook is Linux-only. Browser mode keeps the browser's own print
-    implementation, while Cocoa/Windows use their native webview behavior.
-    """
+    """Wire JavaScript window.print() to the native Qt/CUPS print dialog."""
     if not sys.platform.startswith("linux"):
         return {"ok": True, "enabled": False, "reason": "not-linux"}
 
@@ -74,10 +63,6 @@ def _enable_linux_qt_printing(window: Any) -> dict[str, object]:
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
 
-            # Printing is asynchronous.  Retain both printer and callback until
-            # QWebEngineView emits printFinished.
-            job: list[Any] = [printer, None]
-
             def finished(_success: bool) -> None:
                 try:
                     view.printFinished.disconnect(finished)
@@ -88,13 +73,10 @@ def _enable_linux_qt_printing(window: Any) -> dict[str, object]:
                 except ValueError:
                     pass
 
-            job[1] = finished
             _ACTIVE_QT_PRINT_JOBS.append((printer, finished))
             view.printFinished.connect(finished)
             view.print(printer)
         except Exception as exc:
-            # Do not crash the medical-record app because a printer backend is
-            # unavailable.  Surface the failure through a native message box.
             try:
                 from PyQt6.QtWidgets import QMessageBox
                 QMessageBox.critical(native, DISPLAY_NAME, f"Printing failed:\n{exc}")
@@ -108,11 +90,7 @@ def _enable_linux_qt_printing(window: Any) -> dict[str, object]:
 
 
 class NativeApi:
-    """Small native bridge exposed to the HTML/JavaScript interface.
-
-    Clinical data still travels through the existing local Flask API.  This bridge
-    only handles desktop-window actions that a normal browser cannot perform.
-    """
+    """Small native bridge exposed to the HTML/JavaScript interface."""
 
     def __init__(self) -> None:
         self.window: Any | None = None
@@ -123,7 +101,6 @@ class NativeApi:
     def close_app(self) -> dict[str, bool]:
         window = self.window
         if window is not None:
-            # Let the JavaScript call return before destroying its own webview.
             threading.Timer(0.08, window.destroy).start()
         return {"ok": True}
 
@@ -140,7 +117,6 @@ class NativeApi:
         return {"ok": bool(webbrowser.open(url, new=1)), "url": url}
 
     def select_pdf_folder(self) -> dict[str, object]:
-        """Open the native OS folder chooser for the Bulk PDF importer."""
         window = self.window
         if window is None:
             return {"ok": False, "cancelled": True}
@@ -151,8 +127,7 @@ class NativeApi:
             return {"ok": False, "error": str(exc)}
         if not selected:
             return {"ok": True, "cancelled": True}
-        folder = str(selected[0])
-        return {"ok": True, "cancelled": False, "folder": folder}
+        return {"ok": True, "cancelled": False, "folder": str(selected[0])}
 
     def environment(self) -> dict[str, object]:
         return {"desktop": True, "version": APP_VERSION, "platform": sys.platform}
@@ -162,9 +137,8 @@ def run_desktop(*, debug: bool = False) -> int:
     os.environ.setdefault("CODECAFE_LAB_DATA", str(platform_data_dir()))
     os.environ["CODECAFE_DESKTOP_MODE"] = "1"
 
-    # Import after setting the persistent data location so app.py never falls
-    # back to a database inside the application bundle/install directory.
-    import app as core
+    # v0.6.12 layers adaptive multi-record OCR over the stable Flask application.
+    import app_v612 as core
     import webview
 
     core.init_db()
@@ -185,16 +159,11 @@ def run_desktop(*, debug: bool = False) -> int:
     )
     api.attach(window)
 
-    # Qt WebEngine emits printRequested when JavaScript calls window.print(),
-    # but pywebview does not attach a print dialog handler for us.  Install it
-    # after the native Qt objects exist.
     if sys.platform.startswith("linux") and getattr(window, "events", None) is not None:
         shown_event = getattr(window.events, "shown", None)
         if shown_event is not None:
             shown_event += lambda: _enable_linux_qt_printing(window)
 
-    # webview.start must run on the main thread.  Passing the Flask WSGI app to
-    # create_window lets pywebview manage the internal local server itself.
     webview.start(debug=debug)
     return 0
 
@@ -218,13 +187,20 @@ def parse_args() -> argparse.Namespace:
         metavar="FILE",
         help="Write --diagnose-pdf JSON to this file (useful for windowed macOS builds).",
     )
+    # Hidden mode used by disposable OCR helpers in frozen/PyInstaller builds.
+    parser.add_argument("--ocr-worker", nargs=2, metavar=("TASK", "OUTPUT"), help=argparse.SUPPRESS)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.ocr_worker:
+        from multi_record_ocr import worker_task_main
+        return int(worker_task_main(args.ocr_worker[0], args.ocr_worker[1]))
+
     if args.diagnose_pdf:
-        from lab_pdf_parser import parse_lab_pdf, ocr_status
+        from lab_pdf_parser_v612 import parse_lab_pdf
+        from lab_pdf_parser import ocr_status
 
         pdf_path = Path(args.diagnose_pdf).expanduser().resolve()
         result = parse_lab_pdf(pdf_path.read_bytes())
@@ -233,6 +209,7 @@ def main() -> int:
             "ok": result.get("ok"),
             "engine": result.get("engine"),
             "page_count": result.get("page_count"),
+            "records": len(result.get("records", [])),
             "results": len(result.get("observations", [])),
             "metadata": result.get("metadata", {}),
             "warnings": result.get("warnings", []),
@@ -244,11 +221,10 @@ def main() -> int:
         else:
             print(payload)
         return 0
+
     if args.browser:
         os.environ.setdefault("CODECAFE_LAB_DATA", str(platform_data_dir()))
-        import app as core
-
-        # Browser mode is intentionally retained for development / diagnostics.
+        import app_v612 as core
         core.main_with_args(host="127.0.0.1", port=args.port, debug=args.debug, open_browser=True)
         return 0
     return run_desktop(debug=args.debug)
