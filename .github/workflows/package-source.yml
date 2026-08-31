@@ -1,0 +1,24 @@
+name: Package source ZIP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare source folder
+        run: |
+          mkdir -p package/CodeCafe_Lab_Records_v0.6.12
+          rsync -a --exclude '.git' --exclude 'package' ./ package/CodeCafe_Lab_Records_v0.6.12/
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeCafe_Lab_Records_v0.6.12_Source
+          path: package/CodeCafe_Lab_Records_v0.6.12
+          if-no-files-found: error
+          compression-level: 9
