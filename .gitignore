@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+data/lab_records.db
+data/pdfs/*
+!data/pdfs/.gitkeep
+*.zip
+.DS_Store
+build/
+dist/
+*.spec
+
+# Never distribute local virtual environments or platform build outputs
+.venv/
+build/
+dist/
+*.spec

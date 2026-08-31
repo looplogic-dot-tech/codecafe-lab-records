@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#3559c7">
+  <title>Registros Clínicos — by CodeCafe</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark">RC</div>
+      <div class="brand-copy"><strong id="brandName">Registros Clínicos</strong><small id="brandTag">by CodeCafe</small></div>
+      <button class="close-nav" id="closeNav">×</button>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-bottom">
+      <button data-section="settings"><span class="nav-icon">⚙</span><span data-i18n="settings">Configuración</span></button>
+      <button id="shutdownBtn" class="shutdown-button"><span class="nav-icon">⏻</span><span data-i18n="closeApp">Cerrar aplicación</span></button>
+      <div class="mode-chip" id="modeChip">Modo simple</div>
+      <div class="profile">
+        <span id="profileBadge">—</span>
+        <div><b id="profileName">Sin paciente</b><small id="profileSub">Cada perfil mantiene sus registros separados.</small></div>
+      </div>
+      <div class="app-version">Python + Flask Desktop · v0.6</div>
+    </div>
+  </aside>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <main class="workspace">
+    <header>
+      <button class="menu" id="menuBtn">☰</button>
+      <div class="page-title"><h1 id="pageTitle">Inicio</h1><p id="pageSubtitle">Registros clínicos organizados por paciente</p></div>
+      <div class="head-actions">
+        <label class="patient-picker"><span data-i18n="patient">PACIENTE</span><select id="patientSelect"></select></label>
+        <button class="lang-toggle" id="langBtn">EN</button>
+        <button class="doctor-btn" id="doctorBtn">▣ <span data-i18n="doctor">Vista médica</span></button>
+        <button class="subtle-button bulk-header-btn" id="bulkImportBtn">▤ <span data-i18n="bulkPdf">Importar carpeta / Bulk</span></button>
+        <button class="primary" id="importBtn">＋ <span data-i18n="newPdf">Importar PDF</span></button>
+      </div>
+    </header>
+    <section class="content" id="content"></section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>window.__INITIAL_STATE__ = {{ initial_state|tojson }};</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
