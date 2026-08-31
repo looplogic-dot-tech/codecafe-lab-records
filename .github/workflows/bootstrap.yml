@@ -1,4 +1,4 @@
-name: Import v0.6.11 stable baseline
+name: Import CodeCafe Lab Records v0.6.11 baseline
 
 on:
   push:
@@ -18,14 +18,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Reconstruct source snapshot
+      - name: Reconstruct verified Lab Records source
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode .bootstrap/source.b64 > /tmp/codecafe-source.tar.gz
-          mkdir -p /tmp/codecafe-source
-          tar -xzf /tmp/codecafe-source.tar.gz -C /tmp/codecafe-source
-          rsync -a --exclude='.git/' /tmp/codecafe-source/ ./
+          for chunk in .bootstrap/lab.*; do
+            tr -d '\n\r' < "$chunk"
+          done | base64 --decode > /tmp/codecafe-lab-records.tar.xz
+          echo 'c13ead442c0df91921797d9f6526a80fe5702a05a96e5d938662d825d177a232  /tmp/codecafe-lab-records.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/codecafe-lab-records.tar.xz -C .
 
       - name: Restore exact OCR language models
         shell: bash
@@ -45,24 +46,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile app.py lab_pdf_parser.py clinical_dictionary.py desktop_window.py
+          ./validate_source.sh
           test -f static/app.js
           test -f static/main.css
           test -f templates/index.html
           test -f ocr/tessdata/eng.traineddata
           test -f ocr/tessdata/spa.traineddata
 
-      - name: Commit stable baseline
+      - name: Commit Lab Records baseline
         shell: bash
         run: |
           set -euo pipefail
           rm -rf .bootstrap
+          rm -f .github/workflows/bootstrap.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
           git config user.name 'Jaime Sanchez'
           git config user.email '34150357+looplogic-dot-tech@users.noreply.github.com'
           git add -A
-          if git diff --cached --quiet; then
-            echo 'No changes to commit.'
-            exit 0
-          fi
-          git commit -m 'Import Registros Clínicos v0.6.11 stable baseline'
+          git commit -m 'Import CodeCafe Lab Records v0.6.11 stable baseline'
           git push origin main
