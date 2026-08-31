@@ -1,0 +1,68 @@
+name: Import v0.6.11 stable baseline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bootstrap.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .bootstrap/source.b64 > /tmp/codecafe-source.tar.gz
+          mkdir -p /tmp/codecafe-source
+          tar -xzf /tmp/codecafe-source.tar.gz -C /tmp/codecafe-source
+          rsync -a --exclude='.git/' /tmp/codecafe-source/ ./
+
+      - name: Restore exact OCR language models
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ocr/tessdata
+          curl --fail --location --retry 3 \
+            https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/eng.traineddata \
+            --output ocr/tessdata/eng.traineddata
+          curl --fail --location --retry 3 \
+            https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/spa.traineddata \
+            --output ocr/tessdata/spa.traineddata
+          echo '7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2  ocr/tessdata/eng.traineddata' | sha256sum -c -
+          echo '6f2e04d02774a18f01bed44b1111f2cd7f3ba7ac9dc4373cd3f898a40ea6b464  ocr/tessdata/spa.traineddata' | sha256sum -c -
+
+      - name: Validate imported source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile app.py lab_pdf_parser.py clinical_dictionary.py desktop_window.py
+          test -f static/app.js
+          test -f static/main.css
+          test -f templates/index.html
+          test -f ocr/tessdata/eng.traineddata
+          test -f ocr/tessdata/spa.traineddata
+
+      - name: Commit stable baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .bootstrap
+          git config user.name 'Jaime Sanchez'
+          git config user.email '34150357+looplogic-dot-tech@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Import Registros Clínicos v0.6.11 stable baseline'
+          git push origin main
