@@ -5,12 +5,17 @@ data/lab_records.db
 data/pdfs/*
 !data/pdfs/.gitkeep
 *.zip
+*.pdf
+*.db
+*.sqlite
+*.sqlite3
 .DS_Store
 build/
 dist/
 *.spec
 
-# Never distribute local virtual environments or platform build outputs
+# Never distribute local virtual environments, clinical source files,
+# patient databases, backups, or platform build outputs.
 .venv/
 build/
 dist/
