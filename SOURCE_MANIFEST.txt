@@ -66,6 +66,8 @@ setup_macos.sh
 setup_windows.bat
 static/app.js
 static/main.css
+static/v612_review.css
+static/v612_review.js
 templates/index.html
 tests/create_build_pdf_fixtures.py
 tests/test_desktop_window.py
@@ -74,6 +76,7 @@ tests/test_glucose_filter.py
 tests/test_integrated_pdf_viewer_source.py
 tests/test_multi_record_ocr.py
 tests/test_parser_unit.py
+tests/test_review_correction_source.py
 tests/test_smoke.py
 validate_source.sh
 validate_source_windows.bat
