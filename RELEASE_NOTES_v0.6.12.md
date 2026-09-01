@@ -25,6 +25,15 @@ v0.6.12 extends the stable v0.6.11 application so that one physical PDF may cont
 - Exact duplicate-page marking scoped by date, laboratory and study.
 - Existing multi-laboratory parsing remains authoritative for SimiLab, Chopo, IMSS, DNA Diagnóstica and future profiles.
 
+### OCR review and correction workflow
+
+- The first correction opportunity is now the document **Review** stage, after OCR/import and before confirming the report.
+- Review shows the structured OCR results and allows correction of analyte, value, unit, and reference range while the original PDF remains available for comparison.
+- **Save corrections and confirm** persists any edits before changing the report from Review to Confirmed.
+- Confirmed results remain editable later from **Advanced mode**.
+- Every manual correction writes an audit record with the previous and resulting values; the original PDF and original OCR/laboratory label remain preserved.
+- Import dialogs explain that OCR output can be corrected during review or later, so users do not need to restart an import because of one OCR error.
+
 ### Data-safety rule
 
 Real clinical PDFs, patient databases, exports and backups are not repository fixtures and must not be committed. Automated tests use synthetic text only.
