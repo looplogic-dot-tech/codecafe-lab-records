@@ -2,19 +2,17 @@ from __future__ import annotations
 
 """v0.6.12 application bridge.
 
-This module layers adaptive multi-record OCR and canonical glucose filtering over the
-validated v0.6.11 Flask application. The stable application/database code stays in
-app.py; v0.6.12 patches parser/version behavior and safely enriches glucose metadata.
+This module layers adaptive multi-record OCR and glucose alias normalization over the
+validated v0.6.11 Flask application. The stable application/database code remains in
+app.py; v0.6.12 patches parser/version behavior at runtime.
 """
 
 import app as core
-from clinical_dictionary import glucose_context, key_text
+from glucose_filter import format_glucose_specimen_detail, glucose_lookup_name, is_glucose_name
 from lab_pdf_parser_v612 import parse_lab_pdf
 
 APP_VERSION = "0.6.12-multi-record-adaptive-ocr"
 
-# Route functions in app.py resolve these globals at request time, so replacing them
-# here upgrades analysis/import flows without forking the stable application module.
 core.APP_VERSION = APP_VERSION
 core.parse_lab_pdf = parse_lab_pdf
 
@@ -22,45 +20,34 @@ _original_normalize_observation_payload = core.normalize_observation_payload
 _original_init_db = core.init_db
 
 
-def _glucose_specimen_detail(raw_name: str, panel: str, default: str) -> str:
-    meta = glucose_context(raw_name, panel)
-    parts: list[str] = []
-    specimen = str(meta.get("specimen_detail") or default or "").strip()
-    context = str(meta.get("collection_context") or "").strip()
-    timepoint = meta.get("timepoint_minutes")
-    if specimen:
-        parts.append(specimen)
-    if context:
-        parts.append(context)
-    if timepoint is not None and not context.startswith(f"{timepoint} min"):
-        parts.append(f"t={int(timepoint)} min")
-    return " · ".join(parts) or default
-
-
 def normalize_observation_payload(*args, **kwargs):
-    """Normalize glucose aliases while preserving matrix/collection context.
+    """Map glucose wording variants to one analyte and retain source context.
 
-    The canonical test remains a single glucose analyte for longitudinal charts.
-    The laboratory's original label remains untouched in raw_test_name, and explicit
-    serum/plasma/blood/capillary + basal/fasting/timepoint information is retained in
-    specimen_detail so no clinically useful context is discarded.
+    ``raw_test_name`` in observations is still written by app.py from the untouched
+    laboratory label. Only the dictionary lookup receives the generic Glucosa label.
+    Existing urine/specimen context continues to disambiguate glucose in urine.
     """
-    result = _original_normalize_observation_payload(*args, **kwargs)
     raw_name = str(kwargs.get("raw_name", ""))
     panel = str(kwargs.get("panel", ""))
-    if result.get("canonical_key") == "glucose_blood":
-        result["specimen_detail"] = _glucose_specimen_detail(
-            raw_name, panel, str(result.get("specimen_detail", ""))
+    specimen_hint = core.specimen_from_context(panel, raw_name)
+
+    lookup_kwargs = dict(kwargs)
+    lookup_kwargs["raw_name"] = glucose_lookup_name(raw_name, panel, specimen_hint)
+    result = _original_normalize_observation_payload(*args, **lookup_kwargs)
+
+    if result.get("canonical_key") == "glucose_blood" and is_glucose_name(raw_name):
+        result["specimen_detail"] = format_glucose_specimen_detail(
+            raw_name, panel, str(result.get("specimen_detail", specimen_hint))
         )
     return result
 
 
-# All core routes resolve this function name from app.py globals at request time.
+# app.py route functions resolve this global dynamically at request time.
 core.normalize_observation_payload = normalize_observation_payload
 
 
 def _remap_existing_glucose_rows() -> None:
-    """Converge glucose aliases imported by older builds onto glucose_blood/urine."""
+    """Converge older glucose aliases without deleting original laboratory wording."""
     with core.db() as conn:
         rows = conn.execute(
             """
@@ -71,9 +58,12 @@ def _remap_existing_glucose_rows() -> None:
             """
         ).fetchall()
         for row in rows:
+            raw_name = row["raw_test_name"] or row["test_name"]
+            if not is_glucose_name(raw_name):
+                continue
             normalized = normalize_observation_payload(
                 conn,
-                raw_name=row["raw_test_name"] or row["test_name"],
+                raw_name=raw_name,
                 panel=row["panel"],
                 lab=row["lab"],
                 raw_unit=row["unit"],
@@ -95,7 +85,6 @@ def init_db() -> None:
     _remap_existing_glucose_rows()
 
 
-# Browser/developer execution through app.main() also uses the patched init function.
 core.init_db = init_db
 
 app = core.app
