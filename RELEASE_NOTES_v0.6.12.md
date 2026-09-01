@@ -6,6 +6,14 @@ v0.6.12 extends the stable v0.6.11 application so that one physical PDF may cont
 
 ### Added in this development snapshot
 
+### Glucose canonical filter
+
+- `Glucosa`, `Glucosa sérica`, `Glucosa basal`, `Glucosa sérica basal`, `Glucosa en sangre`, `Glucosa sanguínea`, `Glucemia en ayunas`, and equivalent English labels now converge on one canonical blood-glucose analyte.
+- Urine glucose remains a separate canonical analyte.
+- The original laboratory label is preserved in `raw_test_name`.
+- Matrix/context such as serum, plasma, blood, capillary blood, basal/fasting, postprandial, and explicit curve timepoints is preserved in observation metadata (`specimen_detail`).
+- Existing glucose-like observations are remapped at database initialization so older imports converge without deleting the source wording.
+
 - Low-cost first-pass classification by page.
 - Recognition of multiple dates within one source PDF.
 - Conservative date inheritance for continuation pages.
