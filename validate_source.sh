@@ -5,15 +5,16 @@ cleanup_bytecode(){ find . -type d -name __pycache__ -prune -exec rm -rf {} + 2>
 trap cleanup_bytecode EXIT
 cleanup_bytecode
 
-python3 -m py_compile app.py desktop_window.py lab_pdf_parser.py clinical_dictionary.py tests/test_smoke.py tests/test_parser_unit.py tests/test_dictionary_unit.py tests/test_desktop_window.py
+python3 -m py_compile app.py app_v612.py desktop_window.py lab_pdf_parser.py lab_pdf_parser_v612.py clinical_dictionary.py glucose_filter.py multi_record_ocr.py tests/test_smoke.py tests/test_parser_unit.py tests/test_dictionary_unit.py tests/test_desktop_window.py tests/test_glucose_filter.py tests/test_multi_record_ocr.py tests/test_review_correction_source.py
 if command -v node >/dev/null 2>&1; then
   node --check static/app.js
+  node --check static/v612_review.js
 else
   echo "Node not installed; skipping JavaScript syntax check (Node is NOT required to run the app)."
 fi
 bash -n build_linux.sh build_macos.sh setup_linux.sh setup_macos.sh run_linux.sh run_macos.sh run_browser_linux.sh run_browser_macos.sh
 
-for required in app.py desktop_window.py lab_pdf_parser.py clinical_dictionary.py templates/index.html static/main.css static/app.js requirements.txt AUTHORSHIP.md; do
+for required in app.py app_v612.py desktop_window.py lab_pdf_parser.py clinical_dictionary.py templates/index.html static/main.css static/app.js static/v612_review.js static/v612_review.css requirements.txt AUTHORSHIP.md; do
   [[ -s "$required" ]] || { echo "Missing required file: $required" >&2; exit 65; }
 done
 
