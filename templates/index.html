@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#3559c7">
   <title>Registros Clínicos — by CodeCafe</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='v612_review.css') }}">
 </head>
 <body>
 <div class="app-shell">
@@ -49,5 +50,6 @@
 
 <script>window.__INITIAL_STATE__ = {{ initial_state|tojson }};</script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='v612_review.js') }}"></script>
 </body>
 </html>
