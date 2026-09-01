@@ -30,6 +30,7 @@ check_ocr_macos.sh
 check_ocr_windows.bat
 clinical_dictionary.py
 desktop_window.py
+glucose_filter.py
 download_packages_linux.sh
 download_packages_macos.sh
 download_packages_windows.bat
@@ -69,6 +70,7 @@ templates/index.html
 tests/create_build_pdf_fixtures.py
 tests/test_desktop_window.py
 tests/test_dictionary_unit.py
+tests/test_glucose_filter.py
 tests/test_integrated_pdf_viewer_source.py
 tests/test_multi_record_ocr.py
 tests/test_parser_unit.py
